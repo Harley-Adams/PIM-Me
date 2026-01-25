@@ -6,7 +6,7 @@ import {
   ListToolsRequestSchema,
   Tool,
 } from "@modelcontextprotocol/sdk/types.js";
-import { activatePimRolesCli, listEligibleRolesCli } from "./pim-cli.js";
+import { activatePimRolesCli, listEligibleRolesCli, listActiveRolesCli } from "./pim-cli.js";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
@@ -143,9 +143,19 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "list_pim_roles",
+    name: "list_eligible_roles",
     description:
-      "Lists all available PIM (Privileged Identity Management) roles that can be activated in Azure. Returns role names, scopes, and whether they are assigned directly or through a group.",
+      "Lists all eligible PIM (Privileged Identity Management) roles that can be activated in Azure. Returns role names, scopes, and whether they are assigned directly or through a group.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "list_active_roles",
+    description:
+      "Lists all currently active (elevated) PIM role assignments. Shows which roles you have activated, along with their start and end times.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -183,7 +193,7 @@ const tools: Tool[] = [
     },
   },
   {
-    name: "get_quick_roles",
+    name: "list_quick_roles",
     description:
       "Lists all eligible PIM roles with indices and shows your currently saved quick roles. Use this to see available roles, then call save_quick_roles with your selected indices to update your favorites.",
     inputSchema: {
@@ -293,13 +303,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "list_pim_roles": {
+      case "list_eligible_roles": {
         const result = await listEligibleRolesCli();
         return {
           content: [
             {
               type: "text",
               text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      }
+
+      case "list_active_roles": {
+        const result = await listActiveRolesCli();
+        
+        if (!result.success) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Error: ${result.message}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        if (result.roles.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "No active role elevations found. Use `activate_quick_roles` or `activate_pim_roles` to elevate.",
+              },
+            ],
+          };
+        }
+
+        // Format nicely for display
+        const rolesList = result.roles.map((r) => {
+          const endTime = r.endDateTime ? new Date(r.endDateTime).toLocaleString() : "Unknown";
+          return `• **${r.roleName}** (${r.scopeName})\n  Expires: ${endTime}`;
+        }).join("\n\n");
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `**Active Role Elevations (${result.roles.length}):**\n\n${rolesList}`,
             },
           ],
         };
@@ -352,7 +404,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "get_quick_roles": {
+      case "list_quick_roles": {
         // Get eligible roles and format them for selection
         const listResult = await listEligibleRolesCli();
         

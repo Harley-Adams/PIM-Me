@@ -1,6 +1,6 @@
 # PIM Me MCP Server
 
-An MCP (Model Context Protocol) server that lets you activate Azure PIM roles through natural language with your AI assistant.
+An MCP (Model Context Protocol) server that lets you activate Azure PIM roles through natural language with your AI assistant. Save your frequently-used roles as favorites and activate them all with a single command.
 
 ## Quick Start
 
@@ -12,7 +12,17 @@ An MCP (Model Context Protocol) server that lets you activate Azure PIM roles th
 
 ### Installation
 
+**From npm (recommended):**
 ```bash
+npx pim-me-mcp
+```
+
+Or add to your MCP config directly (see Configuration below).
+
+**From source:**
+```bash
+git clone https://github.com/Harley-Adams/PIM-Me.git
+cd PIM-Me
 npm install
 npm run build
 ```
@@ -26,8 +36,8 @@ Add to your MCP client:
 {
   "servers": {
     "pim-me": {
-      "command": "node",
-      "args": ["/path/to/PimMeMcp/dist/index.js"]
+      "command": "npx",
+      "args": ["-y", "pim-me-mcp"]
     }
   }
 }
@@ -38,8 +48,8 @@ Add to your MCP client:
 {
   "mcpServers": {
     "pim-me": {
-      "command": "node",
-      "args": ["/path/to/PimMeMcp/dist/index.js"]
+      "command": "npx",
+      "args": ["-y", "pim-me-mcp"]
     }
   }
 }
@@ -76,15 +86,17 @@ Once configured, just say:
 
 - **"Activate my quick roles"** — uses your default justification
 - **"Activate my quick roles for debugging production issue"** — custom justification
-- **"List my PIM roles"** — see all eligible roles
+- **"List my eligible roles"** — see all roles you can activate
+- **"List my active roles"** — see currently elevated roles with expiration times
 - **"Activate the Contributor role for my-subscription"** — activate specific roles
 
 ## Available Tools
 
 | Tool | Description |
 |------|-------------|
-| `list_pim_roles` | Lists all your eligible PIM roles |
-| `get_quick_roles` | Shows eligible roles with indices + your saved quick roles |
+| `list_eligible_roles` | Lists all PIM roles you can activate |
+| `list_active_roles` | Lists currently elevated roles with expiration times |
+| `list_quick_roles` | Shows eligible roles with indices + your saved quick roles |
 | `save_quick_roles` | Saves selected roles (by index) as quick roles |
 | `activate_quick_roles` | Activates your saved quick roles |
 | `activate_pim_roles` | Activates specific roles by name |
@@ -96,7 +108,8 @@ Once configured, just say:
 This MCP server uses the Azure CLI to interact with the Azure PIM REST API:
 
 1. **Lists eligible roles** via `roleEligibilityScheduleInstances` API
-2. **Activates roles** via `roleAssignmentScheduleRequests` API with `SelfActivate` request type
+2. **Lists active roles** via `roleAssignmentScheduleInstances` API (filtered to `assignmentType=Activated`)
+3. **Activates roles** via `roleAssignmentScheduleRequests` API with `SelfActivate` request type
 
 **API Version**: `2020-10-01`
 
@@ -173,6 +186,7 @@ async function getCurrentUserPrincipalId(): Promise<string> {
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
 | `/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?$filter=asTarget()` | GET | List eligible roles |
+| `/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?$filter=asTarget()` | GET | List active roles |
 | `/{scope}/providers/Microsoft.Authorization/roleAssignmentScheduleRequests/{guid}` | PUT | Activate a role |
 
 ---
@@ -183,7 +197,7 @@ async function getCurrentUserPrincipalId(): Promise<string> {
 |-------|----------|
 | "Command 'az' not found" | [Install Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) |
 | "Please run 'az login'" | Run `az login` to authenticate |
-| Role not found | Use `list_pim_roles` to see exact role names and scopes |
+| Role not found | Use `list_eligible_roles` to see exact role names and scopes |
 
 ## License
 

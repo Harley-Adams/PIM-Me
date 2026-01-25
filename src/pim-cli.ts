@@ -85,6 +85,90 @@ async function getCurrentUserPrincipalId(): Promise<string> {
   }
 }
 
+export interface ActiveRoleAssignment {
+  id: string;
+  roleDefinitionId: string;
+  roleName: string;
+  scope: string;
+  scopeName: string;
+  principalId: string;
+  principalType: string;
+  memberType: string;
+  status: string;
+  startDateTime?: string;
+  endDateTime?: string;
+}
+
+export interface CliListActiveRolesResult {
+  success: boolean;
+  roles: ActiveRoleAssignment[];
+  message: string;
+}
+
+/**
+ * List all currently active PIM role assignments for the current user using Azure CLI
+ */
+export async function listActiveRolesCli(): Promise<CliListActiveRolesResult> {
+  try {
+    console.error("Fetching active role assignments...");
+    
+    // Use the PIM API to get active role assignments
+    const apiVersion = "2020-10-01";
+    const url = `https://management.azure.com/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=${apiVersion}&\\$filter=asTarget()`;
+    
+    const result = await azCommand(`rest --method GET --url "${url}"`);
+    const data = JSON.parse(result);
+    
+    const roles: ActiveRoleAssignment[] = [];
+    
+    if (data.value && Array.isArray(data.value)) {
+      for (const item of data.value) {
+        const props = item.properties || {};
+        
+        // Only include PIM-activated roles, not permanent assignments
+        if (props.assignmentType !== "Activated") {
+          continue;
+        }
+        
+        // Get role name from expanded properties
+        const roleName = props.expandedProperties?.roleDefinition?.displayName || "Unknown Role";
+        
+        // Get scope name from expanded properties  
+        const scopeName = props.expandedProperties?.scope?.displayName || 
+                         props.scope?.split("/").pop() || 
+                         props.scope || "";
+        
+        roles.push({
+          id: item.id || "",
+          roleDefinitionId: props.roleDefinitionId || "",
+          roleName,
+          scope: props.scope || "",
+          scopeName,
+          principalId: props.principalId || "",
+          principalType: props.principalType || "",
+          memberType: props.memberType || "Direct",
+          status: props.status || "Active",
+          startDateTime: props.startDateTime,
+          endDateTime: props.endDateTime,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      roles,
+      message: `Found ${roles.length} active PIM role assignments.`,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      roles: [],
+      message: `Error listing active PIM roles: ${errorMessage}`,
+    };
+  }
+}
+
 /**
  * List all eligible PIM role assignments for the current user using Azure CLI
  */
