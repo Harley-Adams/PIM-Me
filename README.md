@@ -1,6 +1,6 @@
-# PIM Me MCP Server
+# PIM Me
 
-An MCP (Model Context Protocol) server that lets you activate Azure PIM roles through natural language with your AI assistant. Save your frequently-used roles as favorites and activate them all with a single command.
+Azure PIM role activation library and MCP server. Activate roles programmatically or through natural language with your AI assistant. Save your frequently-used roles as favorites and activate them all with a single command.
 
 ## Quick Start
 
@@ -10,24 +10,7 @@ An MCP (Model Context Protocol) server that lets you activate Azure PIM roles th
 - Azure CLI installed and logged in (`az login`)
 - Azure account with PIM-eligible roles
 
-### Installation
-
-**From npm (recommended):**
-```bash
-npx pim-me-mcp
-```
-
-Or add to your MCP config directly (see Configuration below).
-
-**From source:**
-```bash
-git clone https://github.com/Harley-Adams/PIM-Me.git
-cd PIM-Me
-npm install
-npm run build
-```
-
-### Configuration
+### As an MCP Server
 
 Add to your MCP client:
 
@@ -55,7 +38,42 @@ Add to your MCP client:
 }
 ```
 
-## Usage
+### As a Library
+
+```bash
+npm install pim-me-mcp
+```
+
+```typescript
+import { 
+  listEligibleRoles, 
+  listActiveRoles, 
+  activateRoles,
+  activateQuickRoles 
+} from 'pim-me-mcp';
+
+// List all roles you can activate
+const eligible = await listEligibleRoles();
+console.log(eligible.roles);
+
+// Check what's currently elevated
+const active = await listActiveRoles();
+active.roles.forEach(role => {
+  console.log(`${role.roleName} expires at ${role.endDateTime}`);
+});
+
+// Activate specific roles
+const result = await activateRoles(
+  [{ name: 'Contributor', scope: 'my-subscription' }],
+  'Development work',
+  8 // hours
+);
+
+// Or activate your saved favorites
+const quickResult = await activateQuickRoles('Development work');
+```
+
+## MCP Server Usage
 
 ### Setting Up Quick Roles
 
@@ -90,7 +108,7 @@ Once configured, just say:
 - **"List my active roles"** — see currently elevated roles with expiration times
 - **"Activate the Contributor role for my-subscription"** — activate specific roles
 
-## Available Tools
+## Available Tools (MCP)
 
 | Tool | Description |
 |------|-------------|
@@ -100,6 +118,40 @@ Once configured, just say:
 | `save_quick_roles` | Saves selected roles (by index) as quick roles |
 | `activate_quick_roles` | Activates your saved quick roles |
 | `activate_pim_roles` | Activates specific roles by name |
+
+## Library API
+
+### Core Functions
+
+| Function | Description |
+|----------|-------------|
+| `listEligibleRoles()` | Returns all PIM roles you can activate |
+| `listActiveRoles()` | Returns currently elevated roles with expiration times |
+| `activateRoles(roles, justification, hours)` | Activates specific roles |
+| `activateQuickRoles(justification?, hours?)` | Activates your saved favorites |
+
+### Configuration Functions
+
+| Function | Description |
+|----------|-------------|
+| `loadQuickRolesConfig()` | Loads quick roles from config file or env |
+| `saveQuickRolesConfig(roles, desc?, justification?)` | Saves quick roles to config |
+| `getConfigPath()` | Returns path to `~/.pim-me-mcp.json` |
+
+### Types
+
+```typescript
+interface RoleConfig {
+  name: string;   // e.g., "Contributor"
+  scope: string;  // e.g., "my-subscription"
+}
+
+interface QuickRolesConfig {
+  roles: RoleConfig[];
+  description?: string;
+  defaultJustification?: string;
+}
+```
 
 ---
 

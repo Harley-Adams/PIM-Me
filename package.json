@@ -1,11 +1,21 @@
 {
   "name": "pim-me-mcp",
-  "version": "1.1.0",
-  "description": "MCP server for automating Azure PIM role activations using Azure CLI",
+  "version": "1.2.0",
+  "description": "Azure PIM role activation library and MCP server - activate roles programmatically or via AI assistants",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server.js"
+    }
+  },
   "bin": {
-    "pim-me-mcp": "./dist/index.js"
+    "pim-me-mcp": "./dist/server.js"
   },
   "files": [
     "dist",
