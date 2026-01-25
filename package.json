@@ -7,6 +7,19 @@
   "bin": {
     "pim-me-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Harley-Adams/PIM-Me.git"
+  },
+  "homepage": "https://github.com/Harley-Adams/PIM-Me#readme",
+  "bugs": {
+    "url": "https://github.com/Harley-Adams/PIM-Me/issues"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -15,12 +28,14 @@
   },
   "keywords": [
     "mcp",
+    "model-context-protocol",
     "azure",
     "pim",
+    "privileged-identity-management",
     "automation",
     "cli"
   ],
-  "author": "",
+  "author": "Harley Adams",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
