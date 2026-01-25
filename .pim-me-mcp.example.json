@@ -1,0 +1,10 @@
+{
+  "quickRoles": {
+    "description": "Activates my commonly used PIM roles for daily development work",
+    "roles": [
+      { "name": "Contributor", "scope": "my-subscription-name" },
+      { "name": "Owner", "scope": "my-resource-group" },
+      { "name": "Reader", "scope": "production" }
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.pim-mcp-browser-data/
+*.log
+.DS_Store
+
+# Local config (may contain personal role definitions)
+.pim-me-mcp.json
