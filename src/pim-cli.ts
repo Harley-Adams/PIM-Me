@@ -4,6 +4,43 @@ import { randomUUID } from "crypto";
 
 const execAsync = promisify(exec);
 
+/**
+ * Get an access token for Azure Management API via Azure CLI.
+ * This is the only az CLI call we need - no special characters in this command.
+ */
+async function getAccessToken(): Promise<string> {
+  const result = await azCommand(
+    'account get-access-token --resource https://management.azure.com'
+  );
+  const tokenData = JSON.parse(result);
+  return tokenData.accessToken;
+}
+
+/**
+ * Make an authenticated REST call to Azure Management API using native fetch.
+ * This avoids shell escaping issues with cmd.exe on Windows (& in URLs, " in JSON bodies).
+ */
+async function azureRestCall(method: string, url: string, body?: unknown): Promise<unknown> {
+  const token = await getAccessToken();
+  const options: RequestInit = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'Accept-Language': 'en-US',
+    },
+  };
+  if (body) {
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(url, options);
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`Azure REST API error (${response.status}): ${text}`);
+  }
+  return text ? JSON.parse(text) : {};
+}
+
 export interface PimRoleAssignment {
   id: string;
   roleDefinitionId: string;
@@ -53,10 +90,7 @@ async function azCommand(command: string): Promise<string> {
 async function getCurrentUserPrincipalId(): Promise<string> {
   try {
     // Get the access token and extract the oid (object ID) claim
-    const tokenResult = await azCommand(
-      'account get-access-token --resource https://management.azure.com --query "accessToken" -o tsv'
-    );
-    const token = tokenResult.trim();
+    const token = await getAccessToken();
     
     // Decode the JWT payload (second part)
     const parts = token.split(".");
@@ -114,10 +148,9 @@ export async function listActiveRolesCli(): Promise<CliListActiveRolesResult> {
     
     // Use the PIM API to get active role assignments
     const apiVersion = "2020-10-01";
-    const url = `https://management.azure.com/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=${apiVersion}&\\$filter=asTarget()`;
+    const url = `https://management.azure.com/providers/Microsoft.Authorization/roleAssignmentScheduleInstances?api-version=${apiVersion}&$filter=asTarget()`;
     
-    const result = await azCommand(`rest --method GET --url "${url}"`);
-    const data = JSON.parse(result);
+    const data = await azureRestCall('GET', url) as any;
     
     const roles: ActiveRoleAssignment[] = [];
     
@@ -178,10 +211,9 @@ export async function listEligibleRolesCli(): Promise<CliListRolesResult> {
     
     // Use the PIM API to get eligible role assignments
     const apiVersion = "2020-10-01";
-    const url = `https://management.azure.com/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=${apiVersion}&\\$filter=asTarget()`;
+    const url = `https://management.azure.com/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=${apiVersion}&$filter=asTarget()`;
     
-    const result = await azCommand(`rest --method GET --url "${url}"`);
-    const data = JSON.parse(result);
+    const data = await azureRestCall('GET', url) as any;
     
     const roles: PimRoleAssignment[] = [];
     
@@ -273,14 +305,7 @@ export async function activateRoleCli(
     
     console.error(`Activating role at scope: ${scope}`);
     
-    // Need to escape the JSON body for shell
-    const bodyJson = JSON.stringify(requestBody).replace(/"/g, '\\"');
-    
-    const result = await azCommand(
-      `rest --method PUT --url "${activationUrl}" --body "${bodyJson}"`
-    );
-    
-    const activationResult = JSON.parse(result);
+    const activationResult = await azureRestCall('PUT', activationUrl, requestBody) as any;
     
     const status = activationResult.properties?.status;
     if (status === "Provisioned" || 
