@@ -1,6 +1,6 @@
 {
   "name": "pim-me-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Azure PIM role activation library and MCP server - activate roles programmatically or via AI assistants",
   "type": "module",
   "main": "dist/index.js",
